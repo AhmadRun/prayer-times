@@ -1,0 +1,101 @@
+{
+  "schemaVersion": 1,
+  "id": "io.github.ahmadrun.prayer-times",
+  "name": "Prayer Times",
+  "version": "0.1.0",
+  "author": "Ahmad Elyan",
+  "license": "MIT",
+  "repository": "https://github.com/AhmadRun/prayer-times",
+  "description": "Islamic prayer times in the Omarchy bar, with a reminder before each azan, optional azan sound, and automatic or manual location.",
+  "kinds": ["bar-widget"],
+  "entryPoints": {
+    "barWidget": "PrayerTimesWidget.qml"
+  },
+  "barWidget": {
+    "displayName": "Prayer Times",
+    "description": "Next prayer time, pre-azan reminder and azan alert, computed offline for your location.",
+    "category": "Info",
+    "aliases": ["azan", "adhan", "prayer", "salah", "salat", "namaz", "islam"],
+    "allowMultiple": false,
+    "defaultSection": "right",
+    "defaults": {
+      "method": "MWL",
+      "asrMethod": "Standard",
+      "timeFormat": "24h",
+      "reminderMinutes": 10,
+      "azanSound": "",
+      "fajrAzanSound": "",
+      "offsetMinutes": 0,
+      "hijriAdjust": 0
+    },
+    "schema": [
+      {
+        "key": "method",
+        "type": "enum",
+        "label": "Calculation method",
+        "options": ["MWL", "ISNA", "Egypt", "Makkah", "Karachi", "Tehran", "Jafari", "Gulf", "Kuwait", "Qatar", "Singapore", "Turkey"],
+        "defaultValue": "MWL",
+        "description": "MWL: Muslim World League · Makkah: Umm al-Qura · Egypt: Egyptian Authority · ISNA: North America · Karachi · Tehran · Jafari · Gulf · Kuwait · Qatar · Singapore · Turkey (Diyanet)"
+      },
+      {
+        "key": "asrMethod",
+        "type": "enum",
+        "label": "Asr calculation",
+        "options": ["Standard", "Hanafi"],
+        "defaultValue": "Standard",
+        "description": "Standard: Shafi'i, Maliki, Hanbali. Hanafi: later Asr."
+      },
+      {
+        "key": "timeFormat",
+        "type": "enum",
+        "label": "Time format",
+        "options": ["24h", "12h"],
+        "defaultValue": "24h"
+      },
+      {
+        "key": "reminderMinutes",
+        "type": "integer",
+        "label": "Reminder before azan (minutes)",
+        "min": 0,
+        "max": 60,
+        "step": 1,
+        "defaultValue": 10,
+        "description": "0 turns the reminder off."
+      },
+      {
+        "key": "azanSound",
+        "type": "path",
+        "label": "Azan sound file",
+        "defaultValue": "",
+        "description": "An mp3/ogg/wav file played at prayer time. Leave empty for notification only."
+      },
+      {
+        "key": "fajrAzanSound",
+        "type": "path",
+        "label": "Fajr azan sound file",
+        "defaultValue": "",
+        "description": "Optional separate azan for Fajr. Falls back to the azan sound file."
+      },
+      {
+        "key": "offsetMinutes",
+        "type": "integer",
+        "label": "Adjust all times (minutes)",
+        "min": -30,
+        "max": 30,
+        "step": 1,
+        "defaultValue": 0,
+        "description": "Shift every prayer time to match your local mosque."
+      },
+      {
+        "key": "hijriAdjust",
+        "type": "integer",
+        "label": "Hijri date adjustment (days)",
+        "min": -2,
+        "max": 2,
+        "step": 1,
+        "defaultValue": 0,
+        "description": "Correct the Hijri date for local moon sighting."
+      }
+    ]
+  }
+}

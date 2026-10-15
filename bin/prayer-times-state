@@ -2,8 +2,11 @@
 
 # Merge a JSON object into the Prayer Times state file, atomically.
 #
-#   prayer-times-state merge '{"mode":"manual","manual":{"name":"Cairo","latitude":30.06,"longitude":31.25}}'
+#   echo '{"mode":"manual","manual":{"name":"Cairo","latitude":30.06,"longitude":31.25}}' | prayer-times-state merge
 #   prayer-times-state path
+#
+# The patch is read from stdin (one line) and never passed through process
+# arguments, so location data is not exposed to other users via /proc/*/cmdline.
 #
 # The widget watches this file, so edits (by this script or by hand) apply live.
 
@@ -17,19 +20,20 @@ case "${1:-}" in
     echo "$STATE_FILE"
     ;;
   merge)
-    patch="${2:-}"
+    patch=""
+    IFS= read -r patch || [[ -n $patch ]] || { echo "prayer-times-state: expected a JSON object on stdin" >&2; exit 1; }
     jq -e 'type == "object"' <<<"$patch" >/dev/null 2>&1 || { echo "prayer-times-state: patch must be a JSON object" >&2; exit 1; }
     mkdir -p "$STATE_DIR"
-    current="{}"
-    if [[ -s $STATE_FILE ]] && jq -e 'type == "object"' "$STATE_FILE" >/dev/null 2>&1; then
-      current=$(cat "$STATE_FILE")
-    fi
     tmp=$(mktemp "$STATE_DIR/.prayer-times.XXXXXX")
-    jq -n --argjson a "$current" --argjson b "$patch" '$a * $b' >"$tmp"
+    if [[ -s $STATE_FILE ]] && jq -e 'type == "object"' "$STATE_FILE" >/dev/null 2>&1; then
+      jq -s '.[0] * .[1]' "$STATE_FILE" - <<<"$patch" >"$tmp"
+    else
+      jq '.' <<<"$patch" >"$tmp"
+    fi
     mv -f "$tmp" "$STATE_FILE"
     ;;
   *)
-    echo "Usage: prayer-times-state merge '<json-object>' | path" >&2
+    echo "Usage: <json-object> | prayer-times-state merge  |  prayer-times-state path" >&2
     exit 1
     ;;
 esac

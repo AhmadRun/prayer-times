@@ -180,7 +180,10 @@ Panel {
   property var stateWriteQueue: []
   function flushStateWrites() {
     if (stateProc.running || stateWriteQueue.length === 0) return
-    stateProc.command = ["bash", resolvePath("bin/prayer-times-state"), "merge", stateWriteQueue.shift()]
+    // The patch (location name, coordinates) goes over stdin, never argv:
+    // process arguments are world-readable through /proc/<pid>/cmdline.
+    stateProc.patch = stateWriteQueue.shift()
+    stateProc.command = ["bash", resolvePath("bin/prayer-times-state"), "merge"]
     stateProc.running = true
   }
 
@@ -296,7 +299,17 @@ Panel {
 
   Process {
     id: stateProc
-    onExited: root.flushStateWrites()
+    property string patch: ""
+    stdinEnabled: true
+    onStarted: {
+      write(patch + "\n")
+      patch = ""
+      stdinEnabled = false
+    }
+    onExited: {
+      stdinEnabled = true
+      root.flushStateWrites()
+    }
   }
 
   Process {

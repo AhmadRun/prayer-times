@@ -96,6 +96,8 @@ Panel {
 
   // ---- Alerts
 
+  // notify-send only takes its text as arguments, which are world-readable
+  // through /proc/<pid>/cmdline, so notifications never include the location.
   function notify(title, body, urgency) {
     Quickshell.execDetached(["notify-send", "-a", "Prayer Times", "-u", urgency || "normal", title, body])
   }
@@ -120,14 +122,14 @@ Panel {
   }
 
   function announce(entry) {
-    notify("It's time for " + entry.name, PT.formatTime(entry.time, use12h) + (locationName ? " · " + locationName : ""), "critical")
+    notify("It's time for " + entry.name, PT.formatTime(entry.time, use12h), "critical")
     playAzan(entry.key)
   }
 
   function remind(entry, ms) {
     var minutes = Math.max(1, Math.round(ms / 60000))
     notify(entry.name + " in " + minutes + " minute" + (minutes === 1 ? "" : "s"),
-      PT.formatTime(entry.time, use12h) + (locationName ? " · " + locationName : ""), "normal")
+      PT.formatTime(entry.time, use12h), "normal")
   }
 
   function checkAlerts() {
@@ -237,8 +239,11 @@ Panel {
     }
     geocodeQuery = query
     if (geocodeProc.running) return
-    geocodeProc.command = ["curl", "-fsS", "--max-time", "5",
-      "https://geocoding-api.open-meteo.com/v1/search?name=" + encodeURIComponent(query) + "&count=5&language=en&format=json"]
+    // The URL (with the typed city) goes to curl as a config on stdin, never
+    // argv: process arguments are world-readable through /proc/<pid>/cmdline.
+    // encodeURIComponent leaves no quotes or backslashes to escape.
+    geocodeProc.config = 'url = "https://geocoding-api.open-meteo.com/v1/search?name='
+      + encodeURIComponent(query) + '&count=5&language=en&format=json"'
     geocodeProc.running = true
   }
 
@@ -331,7 +336,15 @@ Panel {
   Process {
     id: geocodeProc
     property string activeQuery: ""
-    onStarted: activeQuery = root.geocodeQuery
+    property string config: ""
+    command: ["curl", "-fsS", "--max-time", "5", "-K", "-"]
+    stdinEnabled: true
+    onStarted: {
+      activeQuery = root.geocodeQuery
+      write(config + "\n")
+      config = ""
+      stdinEnabled = false
+    }
     stdout: StdioCollector {
       waitForEnd: true
       onStreamFinished: {
@@ -341,6 +354,7 @@ Panel {
       }
     }
     onExited: {
+      stdinEnabled = true
       if (root.editingLocation && root.geocodeQuery !== activeQuery) root.requestGeocode()
     }
   }
